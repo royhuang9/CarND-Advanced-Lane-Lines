@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 10 14:52:01 2017
+Created on Sat Feb 11 19:58:51 2017
 
 @author: roy
 """
+
 
 from PIL import Image
 import numpy as np
@@ -21,7 +22,7 @@ with open('./cal_data.pk', 'rb') as fp:
 cameraMt = data['cal']
 distCoff = data['dist']
 
-file_msk = './camera_cal/calibration*.jpg'
+file_msk = './test_images/straight_lines*.jpg'
 allfiles = glob(file_msk)
 
 for filename in allfiles:
@@ -30,7 +31,7 @@ for filename in allfiles:
     dst_img = cv2.undistort(image,cameraMt, distCoff, None, cameraMt)
     
     dst_pil = Image.fromarray(np.uint8(dst_img))
-    savefile = filename.replace('camera_cal', 'output_images')
+    savefile = filename.replace('test_images', 'output_images')
     dst_pil.save(savefile)
 
     plt.figure(figsize=(12,9))
