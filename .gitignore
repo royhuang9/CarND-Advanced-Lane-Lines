@@ -1,6 +1,11 @@
-output_images/*
-bindir/*
-orgdir/*
+output_images/
+bindir/
+orgdir/
+ch2/
+challenge/
+hcdir/
+orgdir2/
+tough/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

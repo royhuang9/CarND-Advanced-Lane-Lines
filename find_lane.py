@@ -55,7 +55,7 @@ def find_lane(image, camera_mt, dist_coeff, persp_mt):
     #warp perspective
     img_warped = cv2.warpPerspective(img_undist, persp_mt, img_size)
     
-    img_save = np.uint8(255*img_warped/img_warped)
+    img_save = np.uint8(255*img_warped/img_warped.max())
     pil_img = Image.fromarray(img_save)
     pil_img.save('./warped.jpg')
 
@@ -64,7 +64,7 @@ def find_lane(image, camera_mt, dist_coeff, persp_mt):
     plt.gray()
     plt.imshow(img_warped)
 
-    histogram = np.sum(img_warped[img_warped.shape[0]/2:, :], axis=0)
+    histogram = np.sum(img_warped[int(img_warped.shape[0]/2):, :], axis=0)
     plt.figure(figsize=(12,9))
     plt.gray()
     plt.plot(histogram)
@@ -82,7 +82,9 @@ warp_data_file = './warp_data.pk'
 with open(warp_data_file, 'rb') as fp:
     persp_mt = pickle.load(fp)
     
-image = np.asarray(Image.open('./test_images/test1.jpg'))
+#image = np.asarray(Image.open('./test_images/test1.jpg'))
+image = np.asarray(Image.open('./test_images/straight_lines2.jpg'))
+
 imshape = image.shape
 vertices = np.array([[(0,imshape[0]),(imshape[1]//2-50, imshape[0]//2), 
             (imshape[1]//2+50, imshape[0]//2), 
