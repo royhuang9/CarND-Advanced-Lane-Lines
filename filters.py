@@ -10,18 +10,21 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
+debug = 0
+
 def sat_filter(image, s_threshold=(120,255)):
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float)
     s_channel = hsv[:, :, 1]
     v_channel = hsv[:, :, 2]
 
     #Roy
-    #'''
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(s_channel)
-    plt.title('S channel')
-    #'''
+    global debug
+    if debug == 1:
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(s_channel)
+        plt.title('S channel')
+    
     
     #clear the higher part half of image v_channel which is sky
     img_h, img_w = v_channel.shape
@@ -35,13 +38,13 @@ def sat_filter(image, s_threshold=(120,255)):
     #combine them together
 
     #Roy
-    #'''
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(v_channel)
-    plt.title('v channel thresholded')
-    #'''
-    
+    global debug
+    if debug == 1:
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(v_channel)
+        plt.title('v channel thresholded')
+        
     combined = np.zeros_like(s_channel)
     combined[ (s_channel >= s_threshold[0]) & (s_channel <= s_threshold[1]) & \
              (v_channel >120)] = 1
@@ -136,9 +139,7 @@ def transform_back(image, persp_mt, image_size):
     return img_unwarped 
 
     
-def pipeline(image, camera_mtx, dist_coeff, new_camera_mtx, persp_mt, persp_size, lane, file_name):
-    print('\n')
-    print(file_name)
+def pipeline(image, camera_mtx, dist_coeff, new_camera_mtx, persp_mt, persp_size, lane, file_name=''):
     s_th=(120, 255)
     s_bin = sat_filter(image, s_threshold = s_th)
 
@@ -163,37 +164,37 @@ def pipeline(image, camera_mtx, dist_coeff, new_camera_mtx, persp_mt, persp_size
     #combined_bin[ (s_bin==1) | ((sobelx_bin==1) & (sobely_bin==1))] = 1
     
     #Roy
-    #'''
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(s_bin)
-    plt.title('S channel {},{}'.format(s_th[0], s_th[1]))
+    global debug
+    if debug == 1:
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(s_bin)
+        plt.title('S channel {},{}'.format(s_th[0], s_th[1]))
+        
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(sobelx_bin)
+        plt.title('Sobel x {}, {}, {}'.format(sobel_kern, sobel_th[0], sobel_th[1]))
+        
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(sobely_bin)
+        plt.title('Sobel y {}, {}, {}'.format(sobel_kern, sobel_th[0], sobel_th[1]))
     
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(sobelx_bin)
-    plt.title('Sobel x {}, {}, {}'.format(sobel_kern, sobel_th[0], sobel_th[1]))
-    
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(sobely_bin)
-    plt.title('Sobel y {}, {}, {}'.format(sobel_kern, sobel_th[0], sobel_th[1]))
-
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(mag_bin)
-    plt.title('Mag {}, {}, {}'.format(mag_kern, mag_th[0], mag_th[1]))
-    
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(direct_bin)
-    plt.title('direct {}, {}, {}'.format(dir_kern, dir_th[0], dir_th[1]))
-    
-    plt.figure(figsize=(12,9))
-    plt.gray()
-    plt.imshow(combined_bin)
-    plt.title('combined')
-    #'''
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(mag_bin)
+        plt.title('Mag {}, {}, {}'.format(mag_kern, mag_th[0], mag_th[1]))
+        
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(direct_bin)
+        plt.title('direct {}, {}, {}'.format(dir_kern, dir_th[0], dir_th[1]))
+        
+        plt.figure(figsize=(12,9))
+        plt.gray()
+        plt.imshow(combined_bin)
+        plt.title('combined')
     
     
     #crop interested region
@@ -209,10 +210,11 @@ def pipeline(image, camera_mtx, dist_coeff, new_camera_mtx, persp_mt, persp_size
     
     img_lane = lane.find_lane(img_warped)
     #Roy
-    #'''
-    plt.figure(figsize=(12,9))
-    plt.imshow(img_lane)
-    #'''
+    global debug
+    if debug == 1:
+        plt.figure(figsize=(12,9))
+        plt.imshow(img_lane)
+
 
     #transform back image
     img_unwarped = transform_back(img_lane, persp_mt, (image.shape[1], image.shape[0]))
@@ -224,10 +226,11 @@ def pipeline(image, camera_mtx, dist_coeff, new_camera_mtx, persp_mt, persp_size
 
 
 class Line():
-    def __init__(self, name='', pty = 660, miss_th=3, count_max=10):
+    def __init__(self, name='', pty = 660, miss_th=3, count_max=5, weight=[0.35, 0.25, 0.15,0.15,0.1]):
         self.name = name
         self.miss_count = 0
         self.miss_th = miss_th
+        self.weight=weight
         
         # was the last detected lane is accepted?
         self.detected = False
@@ -241,7 +244,7 @@ class Line():
         self.curva = 0
         self.curvas = []
         self.count_max = count_max
-                
+
         #distance in meters of vehicle center from the line
         self.line_base_pos = None
                 
@@ -254,6 +257,7 @@ class Line():
         self.mppy = 3.0/95
         
         self.curve_pty = pty
+        self.angle = 0
         
     def cal_curva(self, py):
         fit_rw = np.polyfit(self.ally*self.mppy, self.allx*self.mppx, 2)
@@ -267,10 +271,17 @@ class Line():
         #print('{} new curva {:.6f} old curva {:.6f}'.format(self.name, new_curva, old_curva))
         #if  new_curva > 4 * old_curva:
         #    return False
-        print('{} new {:.2f} old {:.2f}'.format(self.name, fit_params[2], self.fit_params[2]))
-        if np.abs(fit_params[2] - self.fit_params[2]) > 50:
+        #print('{} new {:.2f} old {:.2f}'.format(self.name, fit_params[2], self.fit_params[2]))
+        
+        angle = np.arctan2(660, (2*fit_params[0]*660+ fit_params[1])) * 180 /np.pi
+        if np.abs(angle - 90.0) > 5:
+            print('{} angle {}'.format(self.name, angle))
             return False
-                    
+        
+        if np.abs(fit_params[2] - self.fit_params[2]) > 100:
+            return False
+        
+            
         return True
         
     def fit(self, img_size, x, y):
@@ -278,17 +289,19 @@ class Line():
         self.allx = x
         self.ally = y
         fit_params = np.polyfit(y, x, 2)
-        print('{} fit_params {}'.format(self.name, fit_params))
-        print('cout x {}, y {}'.format(len(x), len(y)))
+        #print('{} fit_params {}'.format(self.name, fit_params))
+        #print('cout x {}, y {}'.format(len(x), len(y)))
+        
+ 
         
         # calculate radius
         curva = self.cal_curva(py)
         
         ret = False
         
-        print('{} self.detected {}, curvature {:.6f}'.format(self.name, self.detected, curva))
+        #print('{} self.detected {}, curvature {:.6f}'.format(self.name, self.detected, curva))
         if self.detected is False or self.check_fit(fit_params, curva):
-            print('{} here'.format(self.name))
+            #print('{} here'.format(self.name))
             self.detected = True
             self.curva = curva
             self.curvas.append(np.abs(curva))
@@ -296,22 +309,22 @@ class Line():
             if len(self.curvas) > self.count_max:
                 self.curvas.pop(0)
             
-            self.fit_params = fit_params
+            
             self.fits.append(fit_params)
             if len(self.fits) > self.count_max:
                 self.fits.pop(0)
+            
             
             # calculate the distance 
             px = fit_params[0]*(py**2) + fit_params[1]*py + fit_params[2]
         
             # judge whether the new fit is good to be accept
             self.line_base_pos = (px - img_size[0]/2)*self.mppx
-            self.fit_params = fit_params
             self.miss_count = 0
             
             ret = True
         else:
-            print('{} there'.format(self.name))
+            #print('{} there'.format(self.name))
             self.miss_count += 1
             # if miss_count is more than threshold,
             if self.miss_count >= self.miss_th:
@@ -324,7 +337,20 @@ class Line():
                 # self.curva and self.fit_params keep no change
                 self.detected = True
                 ret = True
+        if ret:
+            average = [0,0,0]
+            total = 0
+            for idx, one_fit in enumerate(reversed(self.fits)):
+                total += self.weight[idx]
                 
+                for it in range(len(one_fit)):
+                    average[it] += one_fit[it] * self.weight[idx]
+                
+            for it in range(len(average)):
+                average[it] /= total
+            self.fit_params = average
+            #print(total, fit_params, average)
+            
         return ret, self.fit_params
     
     def set_fit(self, params, offset):
@@ -407,11 +433,12 @@ class Lane():
         leftx_base = np.argmax(hstg[:midpoint])
         rightx_base = np.argmax(hstg[midpoint:]) + midpoint
         #Roy
-        #'''
-        plt.figure(figsize=(12,9))
-        plt.plot(hstg)
-        plt.show()
-        #'''
+        global debug
+        if debug == 1:
+            plt.figure(figsize=(12,9))
+            plt.plot(hstg)
+            plt.show()
+    
         nonzero = image.nonzero()
         nonzeroy = nonzero[0]
         nonzerox = nonzero[1]
@@ -432,10 +459,10 @@ class Lane():
             win_xright_low = rightx_current - self.margin
             win_xright_high = rightx_current + self.margin
         
-            cv2.rectangle(img_out, (win_xleft_low, win_y_low), 
-                          (win_xleft_high, win_y_high), (0, 255, 0), 2)
-            cv2.rectangle(img_out, (win_xright_low, win_y_low), 
-                          (win_xright_high, win_y_high), (0, 255, 0), 2)
+            #cv2.rectangle(img_out, (win_xleft_low, win_y_low), 
+            #              (win_xleft_high, win_y_high), (0, 255, 0), 2)
+            #cv2.rectangle(img_out, (win_xright_low, win_y_low), 
+            #              (win_xright_high, win_y_high), (0, 255, 0), 2)
         
             good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & 
                           (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
@@ -459,25 +486,31 @@ class Lane():
         
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
+        
         ret_r, right_fit = self.right.fit((img_w, img_h), rightx, righty)
+        #right_fit=[0,0,0]
+        #right_fit[0] = left_fit[0]
+        #right_fit[1] = left_fit[1]
+        
+        #right_fit[2] = np.mean(rightx - (left_fit[0] * (righty**2)) - left_fit[1] * righty)
         
         if ret_l is False or ret_r is False:
             left_fit, right_fit = self.adjust_fit(left_fit, ret_l, right_fit, ret_r)
         
-        '''
+        #'''
         # find indice for the whole image
         whole_img = np.indices((img_h, img_w))
         imgx= whole_img[1].flatten()
         imgy = whole_img[0].flatten()
         
-        print('imgx shape {}, imgy shape {}'.format(imgx.shape, imgy.shape))
+        #print('imgx shape {}, imgy shape {}'.format(imgx.shape, imgy.shape))
         # got indice between left lane and right lane
         lane_inds = ((imgx >= (left_fit[0]*(imgy**2) + left_fit[1] * imgy + left_fit[2])) 
                         & (imgx < (right_fit[0]*(imgy**2) + right_fit[1] * imgy + right_fit[2])))
         # paint the lane to green
         
         img_out[imgy[lane_inds], imgx[lane_inds]] = [0, 255, 0]
-        '''
+        #'''
         
         ploty = np.linspace(0, img_out.shape[0]-1, img_out.shape[0])
         plot_leftx = np.int_(left_fit[0]*(ploty**2) + left_fit[1]*ploty + left_fit[2])

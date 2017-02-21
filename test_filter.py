@@ -34,13 +34,13 @@ persp_size = data['img_size']
 #filters.left_fit = None
 #files = glob('./test_images/straight_lines*.jpg')
 #files = glob('./orgdir/test55.png')
-#files = glob('./orgdir2/test106.png')
-#files = glob('./orgdir2/test*.png')
-#files = glob('./test_images/test*.jpg')
+files = glob('./orgdir2/test*.png')
+##files = glob('./orgdir2/test122.png')
+#files = glob('./test_images/test1.jpg')
 
 #files = glob('./hcdir2/hc*.jpg')
-#files = glob('./tough/test140.png')
-files = glob('./ch2/ch90.jpg')
+#files = glob('./tough/test126.png')
+#files = glob('./ch2/ch90.jpg')
 
 mylane = Lane(nwindows=20, margin=30, minpix=20)
 
